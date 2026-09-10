@@ -40,7 +40,45 @@ function parseAuthorization(req) {
   return { user: decoded.slice(0, index), pass: decoded.slice(index + 1) };
 }
 
+// PUBLIC_DOWNLOAD_BASES: {"<endpoint>/<bucket>[/<prefix>]": "https://public.example"}
+// — an object (or JSON string) mapping the location segment of the LFS URL to
+// the public base URL that serves the same objects. Longest match wins; the
+// remainder of the location is appended to the base.
+function publicBaseFor(env, bucket) {
+  let bases = env.PUBLIC_DOWNLOAD_BASES;
+  if (!bases) {
+    return null;
+  }
+  if (typeof bases === "string") {
+    bases = JSON.parse(bases);
+  }
+  let best = null;
+  for (const [loc, base] of Object.entries(bases)) {
+    if (bucket === loc || bucket.startsWith(loc + "/")) {
+      if (best === null || loc.length > best.length) {
+        best = loc;
+      }
+    }
+  }
+  if (best === null) {
+    return null;
+  }
+  return bases[best].replace(/\/+$/, "") + bucket.slice(best.length);
+}
+
 async function fetch(req, env) {
+  try {
+    return await handle(req, env);
+  } catch (e) {
+    // parseAuthorization throws a Response to short-circuit; hand it back.
+    if (e instanceof Response) {
+      return e;
+    }
+    throw e;
+  }
+}
+
+async function handle(req, env) {
   const url = new URL(req.url);
 
   if (url.pathname == "/") {
@@ -65,8 +103,7 @@ async function fetch(req, env) {
     return new Response(null, { status: 406 });
   }*/
 
-  const { user, pass } = parseAuthorization(req);
-  let s3Options = { accessKeyId: user, secretAccessKey: pass };
+  let s3Options = {};
 
   const segments = url.pathname.split("/").slice(1, -2);
   let params = {};
@@ -84,7 +121,6 @@ async function fetch(req, env) {
     }
   }
 
-  const s3 = new AwsClient(s3Options);
   const bucket = segments.slice(bucketIdx).join("/");
 
   // Optional hardening for a self-hosted instance: only sign URLs for the S3
@@ -118,6 +154,39 @@ async function fetch(req, env) {
   }
 
   const method = METHOD_FOR[operation];
+  if (!method) {
+    return new Response(
+      JSON.stringify({ message: `Unsupported operation '${operation}'.` }),
+      { status: 422, headers: { "Content-Type": MIME } },
+    );
+  }
+
+  // Downloads from a publicly readable bucket need no credentials at all: when
+  // the request carries no Authorization header and PUBLIC_DOWNLOAD_BASES maps
+  // this location to a public base URL, hand out plain URLs instead of signed
+  // ones. Uploads, and any request that does present credentials, take the
+  // signed path exactly as upstream.
+  const publicBase =
+    operation === "download" && !req.headers.get("Authorization")
+      ? publicBaseFor(env, bucket)
+      : null;
+
+  let action;
+  if (publicBase) {
+    action = async (oid) => ({ href: `${publicBase}/${oid}` });
+  } else {
+    const { user, pass } = parseAuthorization(req);
+    const s3 = new AwsClient({
+      accessKeyId: user,
+      secretAccessKey: pass,
+      ...s3Options,
+    });
+    action = async (oid) => ({
+      href: await sign(s3, bucket, oid, method),
+      expires_in,
+    });
+  }
+
   const response = JSON.stringify({
     transfer: "basic",
     hash_algo: "sha256",
@@ -126,12 +195,7 @@ async function fetch(req, env) {
         oid,
         size,
         authenticated: true,
-        actions: {
-          [operation]: {
-            href: await sign(s3, bucket, oid, method),
-            expires_in,
-          },
-        },
+        actions: { [operation]: await action(oid) },
       })),
     ),
   });

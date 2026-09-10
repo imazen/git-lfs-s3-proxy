@@ -11,7 +11,13 @@
   "vars": {
     // Only sign URLs for these S3 endpoints (hostname or parent-domain suffix,
     // comma-separated). Empty = sign for any endpoint, like upstream.
-    "ALLOWED_ENDPOINTS": "338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com"
+    "ALLOWED_ENDPOINTS": "338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com",
+    // Locations whose objects are also served from a public bucket domain:
+    // downloads requested without credentials get plain URLs there instead of
+    // signed S3 URLs, so a public repo commits no key in its .lfsconfig.
+    "PUBLIC_DOWNLOAD_BASES": {
+      "338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com/codec-corpus": "https://codec-corpus.r2.imazen.org"
+    }
   },
   "observability": { "enabled": true }
 }

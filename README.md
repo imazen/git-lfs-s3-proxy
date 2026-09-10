@@ -87,6 +87,29 @@ be changed for yours:
   instance but pointless exposure for a single-account one. Leave it empty to
   keep upstream behaviour.
 
+#### Credential-free downloads from a public bucket
+
+If the bucket (or a prefix of it) is also served from a public domain — an R2
+custom domain, say — set `PUBLIC_DOWNLOAD_BASES` to map the location part of
+the LFS URL to that public base:
+
+```json
+"PUBLIC_DOWNLOAD_BASES": {
+  "<ACCOUNT_ID>.r2.cloudflarestorage.com/my-bucket": "https://files.example.com"
+}
+```
+
+A `download` batch request that carries **no** credentials and names a covered
+location then gets plain `https://files.example.com/<prefix>/<oid>` URLs
+instead of signed S3 URLs, so a public repository's `.lfsconfig` can be simply
+
+    https://<INSTANCE>/<ENDPOINT>/<BUCKET>/<PREFIX>
+
+with no key in it at all. Uploads still require credentials (an
+unauthenticated upload gets a 401, and Git LFS then asks its credential helper
+for the read/write key), and any request that does present credentials takes
+the signed path exactly as before. Unset, the proxy behaves like upstream.
+
 [`scripts/mint-r2-token.sh`](scripts/mint-r2-token.sh) creates the permanent,
 single-bucket R2 tokens the LFS URL carries (one read-only for `.lfsconfig`,
 one read/write for maintainers' `.git/config`) and prints the S3 key pair.
