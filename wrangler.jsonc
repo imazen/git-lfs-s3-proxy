@@ -1,0 +1,17 @@
+{
+  // imazen's deployment of git-lfs-s3-proxy. `npx wrangler deploy` with
+  // CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in the environment (see
+  // scripts/mint-deploy-token.sh). Adapt `routes` and ALLOWED_ENDPOINTS for
+  // your own account.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "git-lfs-s3-proxy",
+  "main": "_worker.js",
+  "compatibility_date": "2026-08-15",
+  "routes": [{ "pattern": "lfs.imazen.org", "custom_domain": true }],
+  "vars": {
+    // Only sign URLs for these S3 endpoints (hostname or parent-domain suffix,
+    // comma-separated). Empty = sign for any endpoint, like upstream.
+    "ALLOWED_ENDPOINTS": "338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com"
+  },
+  "observability": { "enabled": true }
+}

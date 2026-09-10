@@ -86,6 +86,21 @@ async function fetch(req, env) {
 
   const s3 = new AwsClient(s3Options);
   const bucket = segments.slice(bucketIdx).join("/");
+
+  // Optional hardening for a self-hosted instance: only sign URLs for the S3
+  // endpoints listed in ALLOWED_ENDPOINTS (comma-separated hostnames, or
+  // parent domains that match as a suffix). Unset means "any", like upstream.
+  const allowed = (env.ALLOWED_ENDPOINTS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const endpointHost = bucket.split("/")[0];
+  if (
+    allowed.length &&
+    !allowed.some((a) => endpointHost === a || endpointHost.endsWith("." + a))
+  ) {
+    return new Response(null, { status: 403 });
+  }
   const expires_in = params.expiry || env.EXPIRY || EXPIRY;
 
   const { objects, operation, hash_algo = "sha256" } = await req.json();

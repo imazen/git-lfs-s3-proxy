@@ -4,5 +4,12 @@
   "private": true,
   "dependencies": {
     "aws4fetch": "^1.0.17"
+  },
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.130.0"
   }
 }

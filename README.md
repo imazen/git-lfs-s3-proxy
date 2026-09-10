@@ -63,6 +63,34 @@ To host your own instance of the proxy:
     - Set up your Pages site: set **Build command** to `npm install` and leave all other settings on their defaults.
 - If you own a domain name (e.g. `example.com`), you can [add a CNAME record](https://developers.cloudflare.com/pages/platform/custom-domains/#add-a-custom-cname-record) to point a subdomain (e.g. `git-lfs-s3-proxy.example.com`) at your instance. If you don't own a domain, a `pages.dev` subdomain will work just as well, except you'll have to change your LFS server URL if you ever stop using the proxy.
 
+### Deploying with wrangler instead of Pages (how imazen runs it)
+
+This fork also carries a [`wrangler.jsonc`](wrangler.jsonc) so the same
+`_worker.js` deploys as a plain Cloudflare Worker on a custom domain, from a
+terminal, with no dashboard clicks:
+
+    npm install
+    # a token with Workers Scripts on the account + Workers Routes / DNS / SSL /
+    # Zone Read on the domain's zone — scripts/mint-deploy-token.sh makes one
+    export CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=...
+    npx wrangler deploy
+
+Two things in `wrangler.jsonc` are specific to the deploying account and should
+be changed for yours:
+
+- `routes[0].pattern` — the custom domain the proxy answers on. Use your own
+  domain rather than a `workers.dev` name: the LFS server URL is written into
+  every `.lfsconfig`, and a domain you control can be repointed later.
+- `vars.ALLOWED_ENDPOINTS` — a comma-separated list of S3 endpoint hostnames
+  (or parent domains) this instance will sign URLs for. The stock proxy signs
+  for any endpoint a caller names, which is fine for the canonical shared
+  instance but pointless exposure for a single-account one. Leave it empty to
+  keep upstream behaviour.
+
+[`scripts/mint-r2-token.sh`](scripts/mint-r2-token.sh) creates the permanent,
+single-bucket R2 tokens the LFS URL carries (one read-only for `.lfsconfig`,
+one read/write for maintainers' `.git/config`) and prints the S3 key pair.
+
 ### Find your LFS server URL
 
 We now have everything we need to build the server URL for Git LFS. The format for the URL is
