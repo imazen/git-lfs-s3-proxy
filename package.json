@@ -6,10 +6,13 @@
     "aws4fetch": "^1.0.17"
   },
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "build": "esbuild _worker.js --bundle --format=esm --outfile=dist/_worker.js --log-level=warning",
+    "deploy": "npm run build && wrangler pages deploy --commit-dirty=true",
+    "deploy:worker": "wrangler deploy -c wrangler.workers.jsonc",
+    "dev": "wrangler dev -c wrangler.workers.jsonc --port 3987"
   },
   "devDependencies": {
-    "wrangler": "^4.130.0"
+    "wrangler": "^4.130.0",
+    "esbuild": "^0.25.0"
   }
 }

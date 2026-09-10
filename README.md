@@ -63,29 +63,33 @@ To host your own instance of the proxy:
     - Set up your Pages site: set **Build command** to `npm install` and leave all other settings on their defaults.
 - If you own a domain name (e.g. `example.com`), you can [add a CNAME record](https://developers.cloudflare.com/pages/platform/custom-domains/#add-a-custom-cname-record) to point a subdomain (e.g. `git-lfs-s3-proxy.example.com`) at your instance. If you don't own a domain, a `pages.dev` subdomain will work just as well, except you'll have to change your LFS server URL if you ever stop using the proxy.
 
-### Deploying with wrangler instead of Pages (how imazen runs it)
+### Deploying from the terminal with wrangler (how imazen runs it)
 
-This fork also carries a [`wrangler.jsonc`](wrangler.jsonc) so the same
-`_worker.js` deploys as a plain Cloudflare Worker on a custom domain, from a
-terminal, with no dashboard clicks:
+This fork carries wrangler configuration so the same `_worker.js` deploys
+without dashboard clicks. [`wrangler.jsonc`](wrangler.jsonc) is a Pages
+project, the same shape the section above describes, and is what imazen's
+instance (`imazen-lfs`, reached as `lfs.imazen.org`) runs on:
 
     npm install
-    # a token with Workers Scripts on the account + Workers Routes / DNS / SSL /
-    # Zone Read on the domain's zone — scripts/mint-deploy-token.sh makes one
-    export CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=...
-    npx wrangler deploy
+    export CLOUDFLARE_API_TOKEN=...   # Cloudflare Pages Write on the account
+    export CLOUDFLARE_ACCOUNT_ID=...
+    npm run deploy                    # bundles _worker.js into dist/, deploys it
 
-Two things in `wrangler.jsonc` are specific to the deploying account and should
-be changed for yours:
+[`wrangler.workers.jsonc`](wrangler.workers.jsonc) is the same instance as a
+plain Worker on a custom domain (`npm run deploy:worker`; the token then needs
+Workers Scripts on the account plus Workers Routes / DNS / SSL / Zone Read on
+the zone — [`scripts/mint-deploy-token.sh`](scripts/mint-deploy-token.sh)
+makes one). Either way, three things are specific to the deploying account:
 
-- `routes[0].pattern` — the custom domain the proxy answers on. Use your own
-  domain rather than a `workers.dev` name: the LFS server URL is written into
-  every `.lfsconfig`, and a domain you control can be repointed later.
+- the project `name` / `routes` — put the proxy on a domain you control rather
+  than a `pages.dev` or `workers.dev` name: the LFS server URL is written into
+  every `.lfsconfig`, and only a domain you own can be repointed later.
 - `vars.ALLOWED_ENDPOINTS` — a comma-separated list of S3 endpoint hostnames
   (or parent domains) this instance will sign URLs for. The stock proxy signs
   for any endpoint a caller names, which is fine for the canonical shared
   instance but pointless exposure for a single-account one. Leave it empty to
   keep upstream behaviour.
+- `vars.PUBLIC_DOWNLOAD_BASES` — see the next section.
 
 #### Credential-free downloads from a public bucket
 

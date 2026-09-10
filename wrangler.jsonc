@@ -1,13 +1,14 @@
 {
-  // imazen's deployment of git-lfs-s3-proxy. `npx wrangler deploy` with
-  // CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in the environment (see
-  // scripts/mint-deploy-token.sh). Adapt `routes` and ALLOWED_ENDPOINTS for
-  // your own account.
+  // imazen's live instance: a Cloudflare Pages project (the upstream README's
+  // deployment path), driven from the terminal instead of the dashboard:
+  //   npm run deploy        # bundles _worker.js into dist/ and deploys it
+  // with CLOUDFLARE_API_TOKEN (Pages Write) + CLOUDFLARE_ACCOUNT_ID set.
+  // Change `name`, ALLOWED_ENDPOINTS and PUBLIC_DOWNLOAD_BASES for your own
+  // account; wrangler.workers.jsonc is the same thing as a plain Worker.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "git-lfs-s3-proxy",
-  "main": "_worker.js",
+  "name": "imazen-lfs",
+  "pages_build_output_dir": "dist",
   "compatibility_date": "2026-08-15",
-  "routes": [{ "pattern": "lfs.imazen.org", "custom_domain": true }],
   "vars": {
     // Only sign URLs for these S3 endpoints (hostname or parent-domain suffix,
     // comma-separated). Empty = sign for any endpoint, like upstream.
@@ -15,9 +16,6 @@
     // Locations whose objects are also served from a public bucket domain:
     // downloads requested without credentials get plain URLs there instead of
     // signed S3 URLs, so a public repo commits no key in its .lfsconfig.
-    "PUBLIC_DOWNLOAD_BASES": {
-      "338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com/codec-corpus": "https://codec-corpus.r2.imazen.org"
-    }
-  },
-  "observability": { "enabled": true }
+    "PUBLIC_DOWNLOAD_BASES": "{\"338ad3b06716695d6e2c81c864e387d8.r2.cloudflarestorage.com/codec-corpus\": \"https://codec-corpus.r2.imazen.org\"}"
+  }
 }
