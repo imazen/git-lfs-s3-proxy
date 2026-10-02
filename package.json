@@ -12,7 +12,7 @@
     "dev": "wrangler dev -c wrangler.workers.jsonc --port 3987"
   },
   "devDependencies": {
-    "wrangler": "^4.130.0",
+    "wrangler": "^4.147.0",
     "esbuild": "^0.25.0"
   }
 }
